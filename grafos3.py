@@ -1,0 +1,51 @@
+from pyspark import SparkContext
+import sys
+
+def interpretar_arista(linea):
+    n1, n2 = linea.strip().strip('"').split('","')
+    if n1 < n2:
+        return (n1, n2)
+    elif n1 > n2:
+        return (n2, n1)
+    else:
+        return None
+
+def mapear_aristas_a_lista_adyacencia(arista):
+    if arista is not None:
+        n1, n2 = arista
+        return [(n1, [n2]), (n2, [n1])]
+    else:
+        return []
+
+def reducir_lista_adyacencia(lista1, lista2):
+    return lista1 + lista2
+
+def encontrar_ciclos_de_3(lista_adyacencia, diccionario_adyacencia):
+    nodo, vecinos = lista_adyacencia
+    vecinos.sort()
+    ciclos = []
+    for i in range(len(vecinos)):
+        for j in range(i + 1, len(vecinos)):
+            n1, n2 = vecinos[i], vecinos[j]
+            if n2 in diccionario_adyacencia.get(n1, []):
+                ciclos.append(tuple(sorted([nodo, n1, n2])))
+    return ciclos
+
+def main(sc, archivos):
+    for archivo in archivos:    
+        rdd = sc.textFile(archivo).map(interpretar_arista)
+
+        listas_adyacencia = rdd.flatMap(mapear_aristas_a_lista_adyacencia).reduceByKey(reducir_lista_adyacencia)
+
+        diccionario_adyacencia = listas_adyacencia.collectAsMap()
+
+        ciclos_de_3 = listas_adyacencia.flatMap(lambda lista_adyacencia: encontrar_ciclos_de_3(lista_adyacencia, diccionario_adyacencia)).distinct().collect()
+
+        print(f'Ciclos de 3 en el archivo {archivo}:', ciclos_de_3)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Uso: python3 {0} <file>".format(sys.argv[0]))
+    else:
+        with SparkContext() as sc:
+            main(sc, sys.argv[1:])
