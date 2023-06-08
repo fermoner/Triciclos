@@ -1,2 +1,2 @@
 # Triciclos
-Practica opcional de calcular los 3-ciclos de un grapo
+Practica opcional de calcular los 3-ciclos de un grafo
